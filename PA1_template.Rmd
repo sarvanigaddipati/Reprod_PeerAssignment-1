@@ -1,0 +1,104 @@
+Loading and preprocessing the data
+=======================================
+
+```{r}
+library(knitr)
+mydata<-read.csv("activity.csv",head=TRUE,sep=",")
+nrow(mydata)
+str(mydata)
+data<-na.omit(mydata)
+nrow(data)
+```
+
+What is mean total number of steps taken per day?
+==================================================
+```{r}
+library(dplyr)
+activity<-data %>% group_by(date) %>% summarize(totalsteps=sum(steps))
+
+hist(activity$totalsteps,xlab="Number steps per each day",ylab="Number of days",col="pink",main="Graphical Representation Of Total Steps In a Day")
+
+datamean<-mean(activity$totalsteps)
+datamedian<-median(activity$totalsteps)
+ 
+print(sprintf("Mean of total number of steps taken per day is: %f",datamean))
+print(sprintf("Meadian of total number of steps taken per day is: %f",datamedian))
+```
+
+What is the average daily activity pattern ?
+================================================
+
+```{r}
+dtq2<-data %>% group_by(interval) %>% summarize(average=mean(steps))
+
+plot(dtq2$interval,dtq2$average,xlab="Interval",ylab="Average number of steps",type="l",col="blue",main="Average Daily Activity Pattern")
+
+maxvalue<-dtq2$interval[dtq2$average==max(dtq2$average)]
+
+print(sprintf("5-min time Interval with maximum average steps taken per day: %i ",maxvalue))
+```
+
+Imputing Missing Values
+========================
+
+```{r}
+missingrows<- (nrow(mydata)-nrow(data))
+print(sprintf("Total number of missing values in the dataset(ie.,NA's): %i", missingrows))
+```
+
+Strategy
+===========
+
+
+Replace NA step values for corresponding intervals with mean interval values calculated above
+===========================
+
+```{r}
+newdata<-mydata
+imdt = mean(mydata$steps,na.rm=T)
+newdata[,"steps"][is.na(newdata$steps)]=imdt
+aggdata <- aggregate(x = newdata[c("steps")], FUN = sum,by = list(Group.date = newdata$date),na.rm=TRUE)
+aggdata
+```
+
+Plot Histogram of total steps with imputed data
+================================================
+```{r}
+hist(aggdata$steps,xlab="Total steps per day",ylab="Number of Days",main="Total Steps Per Day",col="green")
+```
+
+Calculate and report the mean and median total number of steps taken per day
+====================================
+```{r}
+ ty<-newdata %>% group_by(date) %>% summarize(totalsteps=sum(steps))
+meansteps <- mean(ty$totalsteps)
+mediansteps <- median(ty$totalsteps)
+
+print(sprintf("Mean total steps taken per day: %f ", meansteps))
+print(sprintf("Median total steps taken per day: %f ", mediansteps))
+```
+
+Are there differences in activity patterns between weekdays and weekends?
+======================================================
+
+```{r}
+mydata = read.csv("activity.csv")
+wdata<-mydata
+wdata$day=weekdays(as.Date(wdata$date))
+wdata$weekday[wdata$day %in% c("Saturday","Sunday")] = "Weekend"
+wdata$weekday[!(wdata$day %in% c("Saturday","Sunday"))] = "Weekday"
+
+table(wdata$weekday,wdata$day)
+
+```
+
+Graphical Representation
+========================
+ 
+```{r}  
+aggdata <- aggregate(x = wdata[c("steps")], FUN = sum,by = list(Group.interval = wdata$interval, weekday=wdata$weekday),na.rm=TRUE)
+library(lattice)
+xyplot(steps~Group.interval|weekday, data=aggdata, type="l",col="blue",xlab="Interval",ylab="Average Number of Steps")
+
+```
+
